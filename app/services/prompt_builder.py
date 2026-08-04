@@ -61,7 +61,7 @@ SOLO JSON. SIN TEXTO ADICIONAL.
 def build_prompt_nutricional(contexto: Dict[str, Any]) -> str:
     """Construye el prompt para generar un plan nutricional con detalles completos"""
     
-    restricciones = contexto.get('restriccionesDieteticas', [])
+    restricciones = contexto.get('restricciones_dieteticas', [])
     restricciones_texto = ", ".join(restricciones) if restricciones else "Ninguna"
     
     alergias = contexto.get('alergias', [])
@@ -162,5 +162,6 @@ DATOS DEL SOCIO:
 }}
 
 **RESPONDE SOLO CON JSON VÁLIDO. TODOS LOS CAMPOS DEBEN TENER VALOR. NINGÚN CAMPO PUEDE SER null.**
+**LAS RESTRICCIONES DIETÉTICAS DEL SOCIO SON: {restricciones_texto}. DEBES INCLUIRLAS EN EL CAMPO `restricciones_dieteticas`.**
 """
     return prompt

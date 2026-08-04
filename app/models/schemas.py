@@ -63,15 +63,14 @@ class PlanNutricionalGeneracionResponse(BaseModel):
     
 class SugerenciaComida(BaseModel):
     nombre: str
-    descripcion: str  # AHORA ES OBLIGATORIO
+    descripcion: str
     calorias: float
     proteinas: Optional[float] = None
     carbohidratos: Optional[float] = None
     grasas: Optional[float] = None
-    ingredientes: str  # AHORA ES OBLIGATORIO
-    preparacion: str   # AHORA ES OBLIGATORIO
+    ingredientes: str
+    preparacion: str
 
-    # Validación para asegurar que los campos no sean null
     @model_validator(mode='after')
     def validate_fields(self):
         if self.descripcion is None or self.descripcion == "":
