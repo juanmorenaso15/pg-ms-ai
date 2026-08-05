@@ -10,7 +10,7 @@ class Settings:
     MODEL_NAME: str = os.getenv("MODEL_NAME", "llama-3.3-70b-versatile")
     
     TEMPERATURE: float = float(os.getenv("TEMPERATURE", "0.7"))
-    MAX_OUTPUT_TOKENS: int = int(os.getenv("MAX_OUTPUT_TOKENS", "4096"))
+    MAX_OUTPUT_TOKENS: int = int(os.getenv("MAX_OUTPUT_TOKENS", "6000"))
     TOP_P: float = float(os.getenv("TOP_P", "0.95"))
 
 settings = Settings()

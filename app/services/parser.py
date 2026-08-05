@@ -1,6 +1,6 @@
 import json
 import re
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 def parse_response(respuesta: str) -> Dict[str, Any]:
     """
@@ -14,6 +14,7 @@ def parse_response(respuesta: str) -> Dict[str, Any]:
     respuesta = respuesta.strip()
     print(f"Respuesta original (primeros 200 chars): {respuesta[:200]}...")
     
+    # Limpiar markdown
     cleaned = re.sub(r'```json\s*', '', respuesta)
     cleaned = re.sub(r'```\s*', '', cleaned)
     cleaned = cleaned.strip()
@@ -25,6 +26,7 @@ def parse_response(respuesta: str) -> Dict[str, Any]:
         except json.JSONDecodeError:
             pass
     
+    # Buscar bloque JSON con markdown
     json_block_pattern = r'```json\s*([\s\S]*?)```'
     match = re.search(json_block_pattern, respuesta)
     
@@ -36,6 +38,7 @@ def parse_response(respuesta: str) -> Dict[str, Any]:
         except json.JSONDecodeError as e:
             print(f"Error decodificando JSON del bloque: {e}")
     
+    # Buscar JSON en el texto
     json_pattern = r'\{[\s\S]*\}'
     match = re.search(json_pattern, respuesta)
     
@@ -47,6 +50,7 @@ def parse_response(respuesta: str) -> Dict[str, Any]:
         except json.JSONDecodeError as e:
             print(f"Error decodificando JSON: {e}")
     
+    # Intentar parsear directamente
     try:
         print("Intentando parsear directamente")
         return _procesar_json(json.loads(respuesta))
@@ -62,8 +66,11 @@ def _procesar_json(data: Dict[str, Any]) -> Dict[str, Any]:
     Detecta si es plan nutricional (tiene calorias_diarias) o rutina (tiene detalles/dias).
     """
     
+    # DETECTAR PLAN NUTRICIONAL
     if "calorias_diarias" in data or "caloriasDiarias" in data:
         print("Plan nutricional detectado")
+        
+        # Convertir nombres de campos a snake_case
         if "caloriasDiarias" in data and "calorias_diarias" not in data:
             data["calorias_diarias"] = data["caloriasDiarias"]
             del data["caloriasDiarias"]
@@ -82,12 +89,18 @@ def _procesar_json(data: Dict[str, Any]) -> Dict[str, Any]:
         if "sugerenciasComidas" in data and "sugerencias_comidas" not in data:
             data["sugerencias_comidas"] = data["sugerenciasComidas"]
             del data["sugerenciasComidas"]
+        
+        # PROCESAR PLAN NUTRICIONAL - VALIDAR Y COMPLETAR CAMPOS
+        data = _procesar_plan_nutricional(data)
+        
         return data
     
+    # DETECTAR RUTINA (con detalles)
     if "detalles" in data and data["detalles"]:
         print(f"JSON ya tiene 'detalles' con {len(data['detalles'])} ejercicios")
         return data
     
+    # DETECTAR RUTINA (con dias)
     if "dias" in data and data["dias"]:
         print("Transformando 'dias' a 'detalles'")
         data["detalles"] = []
@@ -110,6 +123,7 @@ def _procesar_json(data: Dict[str, Any]) -> Dict[str, Any]:
         print(f"Transformados {len(data['detalles'])} ejercicios a 'detalles'")
         return data
     
+    # DETECTAR RUTINA (con ejercicios directamente)
     if "ejercicios" in data and data["ejercicios"]:
         print("Convirtiendo 'ejercicios' directamente a 'detalles'")
         data["detalles"] = []
@@ -132,6 +146,93 @@ def _procesar_json(data: Dict[str, Any]) -> Dict[str, Any]:
         return data
     
     print("No se encontraron ni ejercicios ni plan nutricional en la respuesta")
+    return data
+
+
+def _procesar_plan_nutricional(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Procesa y valida un plan nutricional, asegurando que todos los campos tengan valor.
+    """
+    
+    # Asegurar que restricciones_dieteticas sea una lista
+    if "restricciones_dieteticas" not in data or data["restricciones_dieteticas"] is None:
+        data["restricciones_dieteticas"] = []
+    
+    # Asegurar que exista explicacion_ia
+    if "explicacion_ia" not in data or data["explicacion_ia"] is None:
+        data["explicacion_ia"] = "Plan nutricional personalizado adaptado a las necesidades del socio."
+    
+    # Procesar sugerencias de comidas
+    if "sugerencias_comidas" in data and data["sugerencias_comidas"]:
+        for comida, items in data["sugerencias_comidas"].items():
+            if isinstance(items, list):
+                for item in items:
+                    if isinstance(item, dict):
+                        # Asegurar descripcion
+                        if "descripcion" not in item or item["descripcion"] is None or item["descripcion"] == "":
+                            item["descripcion"] = f"{item.get('nombre', 'Plato')} - Opción nutritiva y balanceada"
+                        
+                        # Asegurar ingredientes
+                        if "ingredientes" not in item or item["ingredientes"] is None or item["ingredientes"] == "":
+                            item["ingredientes"] = "Ingredientes frescos y saludables"
+                        
+                        # Asegurar preparacion
+                        if "preparacion" not in item or item["preparacion"] is None or item["preparacion"] == "":
+                            item["preparacion"] = "Preparar los ingredientes, cocinar al gusto y servir"
+    else:
+        # Si no hay sugerencias_comidas, crear valores por defecto
+        data["sugerencias_comidas"] = {
+            "desayuno": [
+                {
+                    "nombre": "Avena con frutas",
+                    "descripcion": "Desayuno energético rico en fibra y nutrientes",
+                    "ingredientes": "Avena, leche, plátano, fresas",
+                    "preparacion": "Cocinar la avena con leche y añadir frutas picadas",
+                    "calorias": 350,
+                    "proteinas": 10.0,
+                    "carbohidratos": 50.0,
+                    "grasas": 8.0
+                }
+            ],
+            "almuerzo": [
+                {
+                    "nombre": "Pollo con verduras",
+                    "descripcion": "Almuerzo completo con proteínas y vegetales",
+                    "ingredientes": "Pechuga de pollo, brócoli, zanahoria, aceite de oliva",
+                    "preparacion": "Cocinar el pollo a la plancha y saltear las verduras",
+                    "calorias": 500,
+                    "proteinas": 35.0,
+                    "carbohidratos": 30.0,
+                    "grasas": 15.0
+                }
+            ],
+            "cena": [
+                {
+                    "nombre": "Pescado con espárragos",
+                    "descripcion": "Cena ligera rica en omega-3",
+                    "ingredientes": "Salmón, espárragos, limón",
+                    "preparacion": "Hornear el salmón con espárragos a 180°C por 20 minutos",
+                    "calorias": 400,
+                    "proteinas": 30.0,
+                    "carbohidratos": 10.0,
+                    "grasas": 20.0
+                }
+            ],
+            "colaciones": [
+                {
+                    "nombre": "Batido de proteínas",
+                    "descripcion": "Colación para recuperación muscular",
+                    "ingredientes": "Leche, proteína, plátano",
+                    "preparacion": "Licuar todos los ingredientes",
+                    "calorias": 200,
+                    "proteinas": 20.0,
+                    "carbohidratos": 25.0,
+                    "grasas": 5.0
+                }
+            ]
+        }
+    
+    print(f"Plan nutricional procesado: {data.get('calorias_diarias')} calorías, {len(data.get('sugerencias_comidas', {}))} categorías de comidas")
     return data
 
 
