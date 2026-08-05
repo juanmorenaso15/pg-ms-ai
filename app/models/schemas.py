@@ -1,4 +1,4 @@
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 
 class DetalleEjercicioRequest(BaseModel):
@@ -60,23 +60,3 @@ class PlanNutricionalGeneracionResponse(BaseModel):
     restricciones_dieteticas: Optional[List[str]] = None
     sugerencias_comidas: Dict[str, List[SugerenciaComida]]
     explicacion_ia: str
-    
-class SugerenciaComida(BaseModel):
-    nombre: str
-    descripcion: str
-    calorias: float
-    proteinas: Optional[float] = None
-    carbohidratos: Optional[float] = None
-    grasas: Optional[float] = None
-    ingredientes: str
-    preparacion: str
-
-    @model_validator(mode='after')
-    def validate_fields(self):
-        if self.descripcion is None or self.descripcion == "":
-            self.descripcion = f"{self.nombre} - Plato nutritivo y equilibrado"
-        if self.ingredientes is None or self.ingredientes == "":
-            self.ingredientes = "Ingredientes frescos y saludables variados"
-        if self.preparacion is None or self.preparacion == "":
-            self.preparacion = "Preparar los ingredientes, cocinar al gusto y servir caliente"
-        return self
