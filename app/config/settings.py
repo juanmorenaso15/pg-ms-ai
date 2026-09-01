@@ -7,7 +7,7 @@ class Settings:
     """Configuración del servicio de IA"""
     
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
-    MODEL_NAME: str = os.getenv("MODEL_NAME", "llama-3.3-70b-versatile")
+    MODEL_NAME: str = os.getenv("MODEL_NAME", "groq/compound")
     
     TEMPERATURE: float = float(os.getenv("TEMPERATURE", "0.7"))
     MAX_OUTPUT_TOKENS: int = int(os.getenv("MAX_OUTPUT_TOKENS", "6000"))
