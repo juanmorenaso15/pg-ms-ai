@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class GroqService:
     def __init__(self):
         self.api_key = settings.GROQ_API_KEY
-        self.model_name = settings.MODEL_NAME or "llama-3.3-70b-versatile"
+        self.model_name = settings.MODEL_NAME or "groq/compound"
         
         if self.api_key:
             try:
