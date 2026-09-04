@@ -10,6 +10,7 @@ class DetalleEjercicioRequest(BaseModel):
     peso_sugerido: Optional[float] = None
     descanso_segundos: Optional[int] = 60
     notas: Optional[str] = None
+    equipo_requerido: Optional[str] = None
 
 class DiaRutinaRequest(BaseModel):
     """Modelo para un día de entrenamiento"""

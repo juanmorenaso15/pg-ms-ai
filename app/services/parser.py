@@ -98,6 +98,9 @@ def _procesar_json(data: Dict[str, Any]) -> Dict[str, Any]:
     # DETECTAR RUTINA (con detalles)
     if "detalles" in data and data["detalles"]:
         print(f"JSON ya tiene 'detalles' con {len(data['detalles'])} ejercicios")
+        for detalle in data["detalles"]:
+            if "equipoRequerido" not in detalle or detalle["equipoRequerido"] is None:
+                detalle["equipoRequerido"] = "Sin equipo específico"
         return data
     
     # DETECTAR RUTINA (con dias)
@@ -115,7 +118,8 @@ def _procesar_json(data: Dict[str, Any]) -> Dict[str, Any]:
                     "repeticionesMax": ejercicio.get("repeticiones_max"),
                     "pesoSugerido": ejercicio.get("peso_sugerido"),
                     "descansoSegundos": ejercicio.get("descanso_segundos", 60),
-                    "notas": ejercicio.get("notas", "")
+                    "notas": ejercicio.get("notas", ""),
+                    "equipoRequerido": ejercicio.get("equipo_requerido", "Sin equipo específico")
                 }
                 data["detalles"].append(detalle)
         
@@ -137,7 +141,8 @@ def _procesar_json(data: Dict[str, Any]) -> Dict[str, Any]:
                 "repeticionesMax": ejercicio.get("repeticiones_max"),
                 "pesoSugerido": ejercicio.get("peso_sugerido"),
                 "descansoSegundos": ejercicio.get("descanso_segundos", 60),
-                "notas": ejercicio.get("notas", "")
+                "notas": ejercicio.get("notas", ""),
+                "equipoRequerido": ejercicio.get("equipo_requerido", "Sin equipo específico")
             }
             data["detalles"].append(detalle)
         
