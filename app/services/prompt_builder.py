@@ -7,6 +7,8 @@ def build_prompt(contexto: Dict[str, Any]) -> str:
     
     ejercicios_disponibles = contexto.get("ejerciciosDisponibles", [])
     equipos_disponibles = contexto.get("equiposDisponibles", [])
+    dias_por_semana = contexto.get('diasPorSemana', 3)
+    duracion_semanas = contexto.get('duracionSemanas', 4)
     
     prompt = f"""
 Eres un entrenador personal experto en fitness y nutrición.
@@ -20,14 +22,14 @@ DATOS DEL SOCIO:
 - Objetivo: {contexto.get('objetivoPrincipal', 'No especificado')}
 - Lesiones: {contexto.get('lesionesPrevias', 'Ninguna')}
 - Condiciones: {contexto.get('condicionesCronicas', 'Ninguna')}
-- Días por semana: {contexto.get('diasPorSemana', 3)}
-- Duración: {contexto.get('duracionSemanas', 4)} semanas
+- Días por semana: {dias_por_semana}
+- Duración total: {duracion_semanas} semanas
 - Cardio: {contexto.get('incluirCardio', True)}
 
 EJERCICIOS DISPONIBLES ({len(ejercicios_disponibles)}):
 """
     
-    for ej in ejercicios_disponibles[:20]:
+    for ej in ejercicios_disponibles[:30]:
         prompt += f"- {ej.get('nombre')} ({ej.get('grupoMuscular')}) - Equipo: {ej.get('equipoNecesario', 'Sin equipo')}\n"
     
     prompt += f"""
@@ -35,27 +37,28 @@ EJERCICIOS DISPONIBLES ({len(ejercicios_disponibles)}):
 EQUIPOS DISPONIBLES EN EL GIMNASIO ({len(equipos_disponibles)}):
 """
     
-    for eq in equipos_disponibles[:20]:
+    for eq in equipos_disponibles[:30]:
         prompt += f"- {eq.get('nombre')} ({eq.get('marca')} {eq.get('modelo')}) - Ubicación: {eq.get('ubicacion', 'No especificada')}\n"
     
-    prompt += """
+    prompt += f"""
 
 **INSTRUCCIONES IMPORTANTES:**
-
-1. **CADA EJERCICIO DEBE INCLUIR EL EQUIPO NECESARIO** basado en los equipos disponibles en el gimnasio.
-2. Los equipos disponibles están listados arriba. Solo usa equipos que existan en la lista.
-3. Si un ejercicio no requiere equipo especial, indica "Sin equipo".
-4. Asegúrate de distribuir los ejercicios de manera que no se usen los mismos equipos simultáneamente.
+1. **ESTRUCTURA POR SEMANAS Y DÍAS:** Debes generar una rutina detallada que cubra las {duracion_semanas} semanas solicitadas. 
+2. **SEPARACIÓN DE SEMANAS:** Si la duración es de varias semanas, **deben salir las semanas separadas**. Es decir, incluye los días seleccionados (por ejemplo, del día 1 al {dias_por_semana}) para la **Semana 1**, y luego repite los días correspondientes para la **Semana 2** (y sucesivas), especificando claramente el número de semana en cada ejercicio.
+3. **CANTIDAD DE EJERCICIOS:** Cada día de entrenamiento debe tener **MÍNIMO 3 EJERCICIOS DIFERENTES**.
+4. **EQUIPAMIENTO:** CADA EJERCICIO DEBE INCLUIR EL EQUIPO NECESARIO (`equipoRequerido`) basándote estrictamente en la lista de equipos disponibles. Si no requiere equipo especial, indica "Sin equipo".
+5. **CAMPO SEMANA OBLIGATORIO:** Usa obligatoriamente el campo `semana` (1, 2, 3...), `diaSemana` (1 para Lunes, 2 para Martes, etc.) y `orden` para estructurar perfectamente los bloques en el JSON. **NINGÚN EJERCICIO DEBE TENER `semana` COMO null**.
 
 RESPONDE SOLO CON JSON. SIN MARKDOWN. SIN ```json.
 
 EL JSON DEBE TENER EXACTAMENTE ESTA ESTRUCTURA:
-{
-    "nombre": "Nombre de la rutina",
-    "descripcion": "Descripción breve",
-    "explicacionIA": "Explicación de por qué esta rutina es adecuada",
+{{
+    "nombre": "Rutina personalizada de {duracion_semanas} semanas",
+    "descripcion": "Rutina completa enfocada en {contexto.get('objetivoPrincipal', 'fitness')}",
+    "explicacionIA": "Explicación detallada de la progresión y por qué esta estructura de semanas y ejercicios es adecuada para el socio.",
     "detalles": [
-        {
+        {{
+            "semana": 1,
             "diaSemana": 1,
             "orden": 1,
             "nombreEjercicio": "Press de Banca",
@@ -64,14 +67,39 @@ EL JSON DEBE TENER EXACTAMENTE ESTA ESTRUCTURA:
             "repeticionesMax": 12,
             "pesoSugerido": 20.0,
             "descansoSegundos": 60,
-            "notas": "Mantener la espalda plana",
+            "notas": "Semana 1: Enfocarse en la técnica",
             "equipoRequerido": "Banco plano"
-        }
+        }},
+        {{
+            "semana": 1,
+            "diaSemana": 1,
+            "orden": 2,
+            "nombreEjercicio": "Aperturas con mancuernas",
+            "series": 3,
+            "repeticionesMin": 10,
+            "repeticionesMax": 12,
+            "pesoSugerido": 10.0,
+            "descansoSegundos": 45,
+            "notas": "Controlar el movimiento",
+            "equipoRequerido": "Mancuernas"
+        }},
+        {{
+            "semana": 1,
+            "diaSemana": 1,
+            "orden": 3,
+            "nombreEjercicio": "Flexiones de brazos",
+            "series": 3,
+            "repeticionesMin": 12,
+            "repeticionesMax": 15,
+            "pesoSugerido": 0.0,
+            "descansoSegundos": 45,
+            "notas": "Al fallo técnico",
+            "equipoRequerido": "Sin equipo"
+        }}
     ]
-}
+}}
 
-**CAMPO OBLIGATORIO:** Cada detalle debe tener el campo "equipoRequerido" con el nombre del equipo necesario.
-SOLO JSON. SIN TEXTO ADICIONAL.
+**RECUERDA:** Incluye múltiples semanas de forma independiente, asegúrate de que cada día contenga al menos 3 ejercicios ordenados secuencialmente. SOLO JSON. Válido y sin texto adicional, Cada detalle debe tener el campo "equipoRequerido" con el nombre del equipo necesario y el campo "semana" con el número correspondiente de la semana.
 """
     
     return prompt
@@ -112,7 +140,7 @@ DATOS DEL SOCIO:
    - `nombre`: Nombre del plato (ej: "Avena con frutas y almendras")
    - `descripcion`: Breve descripción del plato y sus beneficios (ej: "Desayuno energético rico en fibra y proteínas")
    - `ingredientes`: Lista detallada de ingredientes separados por coma (ej: "Avena, leche de almendras, plátano, fresas, almendras")
-   - `preparacion`: Instrucciones claras de preparación (ej: "Cocinar la avena con leche de almendras, añadir frutas picadas y almendras")
+   - `preparacion`: Instrucciones claras de preparación (ej: "Cocinar la avena con leche de almendras a fuego medio durante 5 minutos. Añadir frutas picadas y almendras")
    - `calorias`: Número entero
    - `proteinas`, `carbohidratos`, `grasas`: Números decimales
 
