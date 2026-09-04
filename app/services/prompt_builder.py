@@ -6,6 +6,7 @@ def build_prompt(contexto: Dict[str, Any]) -> str:
     """
     
     ejercicios_disponibles = contexto.get("ejerciciosDisponibles", [])
+    equipos_disponibles = contexto.get("equiposDisponibles", [])
     
     prompt = f"""
 Eres un entrenador personal experto en fitness y nutrición.
@@ -27,9 +28,24 @@ EJERCICIOS DISPONIBLES ({len(ejercicios_disponibles)}):
 """
     
     for ej in ejercicios_disponibles[:20]:
-        prompt += f"- {ej.get('nombre')} ({ej.get('grupoMuscular')})\n"
+        prompt += f"- {ej.get('nombre')} ({ej.get('grupoMuscular')}) - Equipo: {ej.get('equipoNecesario', 'Sin equipo')}\n"
+    
+    prompt += f"""
+
+EQUIPOS DISPONIBLES EN EL GIMNASIO ({len(equipos_disponibles)}):
+"""
+    
+    for eq in equipos_disponibles[:20]:
+        prompt += f"- {eq.get('nombre')} ({eq.get('marca')} {eq.get('modelo')}) - Ubicación: {eq.get('ubicacion', 'No especificada')}\n"
     
     prompt += """
+
+**INSTRUCCIONES IMPORTANTES:**
+
+1. **CADA EJERCICIO DEBE INCLUIR EL EQUIPO NECESARIO** basado en los equipos disponibles en el gimnasio.
+2. Los equipos disponibles están listados arriba. Solo usa equipos que existan en la lista.
+3. Si un ejercicio no requiere equipo especial, indica "Sin equipo".
+4. Asegúrate de distribuir los ejercicios de manera que no se usen los mismos equipos simultáneamente.
 
 RESPONDE SOLO CON JSON. SIN MARKDOWN. SIN ```json.
 
@@ -48,11 +64,13 @@ EL JSON DEBE TENER EXACTAMENTE ESTA ESTRUCTURA:
             "repeticionesMax": 12,
             "pesoSugerido": 20.0,
             "descansoSegundos": 60,
-            "notas": "Mantener la espalda plana"
+            "notas": "Mantener la espalda plana",
+            "equipoRequerido": "Banco plano"
         }
     ]
 }
 
+**CAMPO OBLIGATORIO:** Cada detalle debe tener el campo "equipoRequerido" con el nombre del equipo necesario.
 SOLO JSON. SIN TEXTO ADICIONAL.
 """
     
