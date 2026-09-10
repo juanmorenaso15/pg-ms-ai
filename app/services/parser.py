@@ -98,9 +98,33 @@ def _procesar_json(data: Dict[str, Any]) -> Dict[str, Any]:
     # DETECTAR RUTINA (con detalles)
     if "detalles" in data and data["detalles"]:
         print(f"JSON ya tiene 'detalles' con {len(data['detalles'])} ejercicios")
-        for detalle in data["detalles"]:
+        
+        # Detectar cuántos días únicos existen por bloque para calcular la semana si viene en null
+        dias_en_detalles = [d.get("diaSemana") for d in data["detalles"] if d.get("diaSemana") is not None]
+        dias_unicos = sorted(list(set(dias_en_detalles)))
+        total_dias_por_bloque = len(dias_unicos) if dias_unicos else 5
+        
+        bloque_actual = 0
+        ultimo_dia = -1
+        
+        for idx, detalle in enumerate(data["detalles"]):
+            # Validar equipo requerido
             if "equipoRequerido" not in detalle or detalle["equipoRequerido"] is None:
                 detalle["equipoRequerido"] = "Sin equipo específico"
+            
+            dia_actual = detalle.get("diaSemana", 1)
+            if dia_actual is None:
+                dia_actual = 1
+                detalle["diaSemana"] = 1
+                
+            if idx > 0 and dia_actual <= ultimo_dia:
+                bloque_actual += 1
+                
+            ultimo_dia = dia_actual
+            
+            if "semana" not in detalle or detalle["semana"] is None:
+                detalle["semana"] = bloque_actual + 1
+                
         return data
     
     # DETECTAR RUTINA (con dias)
@@ -108,22 +132,27 @@ def _procesar_json(data: Dict[str, Any]) -> Dict[str, Any]:
         print("Transformando 'dias' a 'detalles'")
         data["detalles"] = []
         for dia in data.get("dias", []):
+            semana_num = dia.get("semana", 1)
+            if semana_num is None:
+                semana_num = 1
             for ejercicio in dia.get("ejercicios", []):
                 detalle = {
+                    "semana": semana_num,
                     "diaSemana": dia.get("dia", 1),
                     "orden": ejercicio.get("orden", len(data["detalles"]) + 1),
-                    "nombreEjercicio": ejercicio.get("nombre_ejercicio", ""),
+                    "nombreEjercicio": ejercicio.get("nombre_ejercicio", ejercicio.get("nombreEjercicio", "")),
                     "series": ejercicio.get("series", 3),
-                    "repeticionesMin": ejercicio.get("repeticiones_min"),
-                    "repeticionesMax": ejercicio.get("repeticiones_max"),
-                    "pesoSugerido": ejercicio.get("peso_sugerido"),
-                    "descansoSegundos": ejercicio.get("descanso_segundos", 60),
+                    "repeticionesMin": ejercicio.get("repeticiones_min", ejercicio.get("repeticionesMin")),
+                    "repeticionesMax": ejercicio.get("repeticiones_max", ejercicio.get("repeticionesMax")),
+                    "pesoSugerido": ejercicio.get("peso_sugerido", ejercicio.get("pesoSugerido")),
+                    "descansoSegundos": ejercicio.get("descanso_segundos", ejercicio.get("descansoSegundos", 60)),
                     "notas": ejercicio.get("notas", ""),
-                    "equipoRequerido": ejercicio.get("equipo_requerido", "Sin equipo específico")
+                    "equipoRequerido": ejercicio.get("equipo_requerido", ejercicio.get("equipoRequerido", "Sin equipo específico"))
                 }
                 data["detalles"].append(detalle)
         
-        del data["dias"]
+        if "dias" in data:
+            del data["dias"]
         print(f"Transformados {len(data['detalles'])} ejercicios a 'detalles'")
         return data
     
@@ -133,20 +162,22 @@ def _procesar_json(data: Dict[str, Any]) -> Dict[str, Any]:
         data["detalles"] = []
         for ejercicio in data.get("ejercicios", []):
             detalle = {
+                "semana": ejercicio.get("semana", 1) if ejercicio.get("semana") is not None else 1,
                 "diaSemana": 1,
                 "orden": ejercicio.get("orden", len(data["detalles"]) + 1),
                 "nombreEjercicio": ejercicio.get("nombre", ejercicio.get("nombre_ejercicio", "")),
                 "series": ejercicio.get("series", 3),
-                "repeticionesMin": ejercicio.get("repeticiones_min"),
-                "repeticionesMax": ejercicio.get("repeticiones_max"),
-                "pesoSugerido": ejercicio.get("peso_sugerido"),
-                "descansoSegundos": ejercicio.get("descanso_segundos", 60),
+                "repeticionesMin": ejercicio.get("repeticiones_min", ejercicio.get("repeticionesMin")),
+                "repeticionesMax": ejercicio.get("repeticiones_max", ejercicio.get("repeticionesMax")),
+                "pesoSugerido": ejercicio.get("peso_sugerido", ejercicio.get("pesoSugerido")),
+                "descansoSegundos": ejercicio.get("descanso_segundos", ejercicio.get("descansoSegundos", 60)),
                 "notas": ejercicio.get("notas", ""),
-                "equipoRequerido": ejercicio.get("equipo_requerido", "Sin equipo específico")
+                "equipoRequerido": ejercicio.get("equipo_requerido", ejercicio.get("equipoRequerido", "Sin equipo específico"))
             }
             data["detalles"].append(detalle)
         
-        del data["ejercicios"]
+        if "ejercicios" in data:
+            del data["ejercicios"]
         print(f"Convertidos {len(data['detalles'])} ejercicios a 'detalles'")
         return data
     
