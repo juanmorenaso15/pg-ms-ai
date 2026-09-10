@@ -2,7 +2,8 @@ from typing import Dict, Any, List
 
 def build_prompt(contexto: Dict[str, Any]) -> str:
     """
-    Construye el prompt para Groq basado en el contexto del socio.
+    Construye el prompt optimizado para Groq basado en el contexto del socio,
+    garantizando alta variedad de ejercicios y progresión real por semanas.
     """
     
     ejercicios_disponibles = contexto.get("ejerciciosDisponibles", [])
@@ -11,7 +12,7 @@ def build_prompt(contexto: Dict[str, Any]) -> str:
     duracion_semanas = contexto.get('duracionSemanas', 4)
     
     prompt = f"""
-Eres un entrenador personal experto en fitness y nutrición.
+Eres un entrenador personal de élite, especialista en programación del entrenamiento, biomecánica y periodización avanzada para hipertrofia y fuerza. Tu meta es evitar rutinas aburridas o repetitivas.
 
 DATOS DEL SOCIO:
 - Nombre: {contexto.get('nombre', 'No especificado')}
@@ -20,92 +21,64 @@ DATOS DEL SOCIO:
 - Estatura: {contexto.get('estatura', 'No especificado')} cm
 - Nivel: {contexto.get('nivelExperiencia', 'No especificado')}
 - Objetivo: {contexto.get('objetivoPrincipal', 'No especificado')}
-- Lesiones: {contexto.get('lesionesPrevias', 'Ninguna')}
-- Condiciones: {contexto.get('condicionesCronicas', 'Ninguna')}
+- Lesiones o limitaciones (EVITAR EJERCICIOS QUE AFECTEN ESTO): {contexto.get('lesionesPrevias', 'Ninguna')}
+- Condiciones médicas: {contexto.get('condicionesCronicas', 'Ninguna')}
 - Días por semana: {dias_por_semana}
 - Duración total: {duracion_semanas} semanas
-- Cardio: {contexto.get('incluirCardio', True)}
+- Incluir Cardio: {contexto.get('incluirCardio', True)}
 
-EJERCICIOS DISPONIBLES ({len(ejercicios_disponibles)}):
+LISTADO DE EJERCICIOS DISPONIBLES EN EL SISTEMA ({len(ejercicios_disponibles)} totales):
+Selecciona exclusivamente ejercicios de esta lista o variantes coherentes con los equipos disponibles.
 """
     
-    for ej in ejercicios_disponibles[:30]:
-        prompt += f"- {ej.get('nombre')} ({ej.get('grupoMuscular')}) - Equipo: {ej.get('equipoNecesario', 'Sin equipo')}\n"
+    for ej in ejercicios_disponibles[:60]:
+        prompt += f"- ID/Nombre: {ej.get('nombre')} | Grupo Muscular: {ej.get('grupoMuscular')} | Equipo: {ej.get('equipoNecesario', 'Sin equipo')}\n"
     
     prompt += f"""
 
 EQUIPOS DISPONIBLES EN EL GIMNASIO ({len(equipos_disponibles)}):
 """
     
-    for eq in equipos_disponibles[:30]:
-        prompt += f"- {eq.get('nombre')} ({eq.get('marca')} {eq.get('modelo')}) - Ubicación: {eq.get('ubicacion', 'No especificada')}\n"
+    for eq in equipos_disponibles[:40]:
+        prompt += f"- {eq.get('nombre')} ({eq.get('marca', '')} {eq.get('modelo', '')})\n"
     
     prompt += f"""
 
-**INSTRUCCIONES IMPORTANTES:**
-1. **ESTRUCTURA POR SEMANAS Y DÍAS:** Debes generar una rutina detallada que cubra las {duracion_semanas} semanas solicitadas. 
-2. **SEPARACIÓN DE SEMANAS:** Si la duración es de varias semanas, **deben salir las semanas separadas**. Es decir, incluye los días seleccionados (por ejemplo, del día 1 al {dias_por_semana}) para la **Semana 1**, y luego repite los días correspondientes para la **Semana 2** (y sucesivas), especificando claramente el número de semana en cada ejercicio.
-3. **CANTIDAD DE EJERCICIOS:** Cada día de entrenamiento debe tener **MÍNIMO 3 EJERCICIOS DIFERENTES**.
-4. **EQUIPAMIENTO:** CADA EJERCICIO DEBE INCLUIR EL EQUIPO NECESARIO (`equipoRequerido`) basándote estrictamente en la lista de equipos disponibles. Si no requiere equipo especial, indica "Sin equipo".
-5. **CAMPO SEMANA OBLIGATORIO:** Usa obligatoriamente el campo `semana` (1, 2, 3...), `diaSemana` (1 para Lunes, 2 para Martes, etc.) y `orden` para estructurar perfectamente los bloques en el JSON. **NINGÚN EJERCICIO DEBE TENER `semana` COMO null**.
+**INSTRUCCIONES CRÍTICAS PARA EVITAR RUTINAS MONÓTONAS:**
+1. **VARIEDAD OBLIGATORIA ENTRE SEMANAS:** Prohibido copiar exactamente la misma estructura de ejercicios de la Semana 1 en la Semana 2, 3 o 4. Modifica variantes de ejercicios (ej: si en la semana 1 usas press plano con barra, en la semana siguiente usa press inclinado o con mancuernas) y aplica una **progresión lógica de cargas o repeticiones** semana a semana.
+2. **ESTRUCTURA POR SEMANAS Y DÍAS:** Debes generar una rutina detallada que cubra obligatoriamente las {duracion_semanas} semanas. Incluye los días seleccionados (del día 1 al {dias_por_semana}) para la **Semana 1**, luego para la **Semana 2**, y así sucesivamente hasta la semana {duracion_semanas}.
+3. **CANTIDAD DE EJERCICIOS:** Cada día de entrenamiento debe tener **MÍNIMO 4 A 6 EJERCICIOS DIFERENTES** bien distribuidos (compuestos y accesorios).
+4. **EQUIPAMIENTO REAL:** CADA EJERCICIO DEBE INCLUIR EL EQUIPO NECESARIO (`equipoRequerido`) basándote estrictamente en las listas provistas. Si no requiere equipo, indica "Sin equipo".
+5. **CAMPOS OBLIGATORIOS:** El campo `semana` (1, 2, 3...), `diaSemana` (1 a {dias_por_semana}) y `orden` (1, 2, 3...) deben estructurarse de forma impecable en el JSON. **NINGÚN EJERCICIO DEBE TENER `semana` COMO null**.
 
-RESPONDE SOLO CON JSON. SIN MARKDOWN. SIN ```json.
+RESPONDE SOLO CON JSON VÁLIDO. SIN MARKDOWN. SIN ```json. SIN TEXTO ADICIONAL ANTES O DESPUÉS.
 
-EL JSON DEBE TENER EXACTAMENTE ESTA ESTRUCTURA:
+EL JSON DEBE TENER EXACTAMENTE ESTA ESTRUCTURA DE ARRAY EN "detalles":
 {{
-    "nombre": "Rutina personalizada de {duracion_semanas} semanas",
-    "descripcion": "Rutina completa enfocada en {contexto.get('objetivoPrincipal', 'fitness')}",
-    "explicacionIA": "Explicación detallada de la progresión y por qué esta estructura de semanas y ejercicios es adecuada para el socio.",
+    "nombre": "Rutina avanzada de {duracion_semanas} semanas - Enfoque Dinámico",
+    "descripcion": "Rutina periodizada enfocada en {contexto.get('objetivoPrincipal', 'fitness')} con variaciones semanales para evitar estancamiento.",
+    "explicacionIA": "Explicación detallada de la progresión de cargas, la selección de ejercicios y por qué esta variación por semanas optimiza los resultados del socio.",
     "detalles": [
         {{
             "semana": 1,
             "diaSemana": 1,
             "orden": 1,
-            "nombreEjercicio": "Press de Banca",
+            "nombreEjercicio": "Nombre exacto del ejercicio",
             "series": 4,
             "repeticionesMin": 8,
-            "repeticionesMax": 12,
+            "repeticionesMax": 10,
             "pesoSugerido": 20.0,
-            "descansoSegundos": 60,
-            "notas": "Semana 1: Enfocarse en la técnica",
-            "equipoRequerido": "Banco plano"
-        }},
-        {{
-            "semana": 1,
-            "diaSemana": 1,
-            "orden": 2,
-            "nombreEjercicio": "Aperturas con mancuernas",
-            "series": 3,
-            "repeticionesMin": 10,
-            "repeticionesMax": 12,
-            "pesoSugerido": 10.0,
-            "descansoSegundos": 45,
-            "notas": "Controlar el movimiento",
-            "equipoRequerido": "Mancuernas"
-        }},
-        {{
-            "semana": 1,
-            "diaSemana": 1,
-            "orden": 3,
-            "nombreEjercicio": "Flexiones de brazos",
-            "series": 3,
-            "repeticionesMin": 12,
-            "repeticionesMax": 15,
-            "pesoSugerido": 0.0,
-            "descansoSegundos": 45,
-            "notas": "Al fallo técnico",
-            "equipoRequerido": "Sin equipo"
+            "descansoSegundos": 90,
+            "notas": "Semana 1: Establecer base de fuerza con técnica perfecta.",
+            "equipoRequerido": "Nombre del equipo"
         }}
     ]
 }}
-
-**RECUERDA:** Incluye múltiples semanas de forma independiente, asegúrate de que cada día contenga al menos 3 ejercicios ordenados secuencialmente. SOLO JSON. Válido y sin texto adicional, Cada detalle debe tener el campo "equipoRequerido" con el nombre del equipo necesario y el campo "semana" con el número correspondiente de la semana.
 """
-    
     return prompt
 
 def build_prompt_nutricional(contexto: Dict[str, Any]) -> str:
-    """Construye el prompt para generar un plan nutricional con detalles completos"""
+    """Construye el prompt para generar un plan nutricional con detalles completos y alta variedad"""
     
     restricciones = contexto.get('restricciones_dieteticas', [])
     restricciones_texto = ", ".join(restricciones) if restricciones else "Ninguna"
@@ -113,54 +86,51 @@ def build_prompt_nutricional(contexto: Dict[str, Any]) -> str:
     alergias = contexto.get('alergias', [])
     alergias_texto = ", ".join(alergias) if alergias else "Ninguna"
     
+    id_socio = contexto.get('id_socio', 1)
+    
     prompt = f"""
-Eres un nutricionista experto en deporte y fitness especializado en planes personalizados.
+Eres un nutricionista deportivo de élite, creativo y altamente especializado en romper la monotonía de las dietas.
 
-DATOS DEL SOCIO:
+DATOS DEL SOCIO (ID: {id_socio}):
 - Nombre: {contexto.get('nombre', 'No especificado')}
 - Edad: {contexto.get('edad', 0)} años
 - Peso: {contexto.get('peso', 'No especificado')} kg
 - Estatura: {contexto.get('estatura', 'No especificado')} cm
 - Objetivo principal: {contexto.get('objetivoPrincipal', 'No especificado')}
 - Nivel de experiencia: {contexto.get('nivelExperiencia', 'No especificado')}
-- Porcentaje grasa: {contexto.get('porcentajeGrasa', 'No especificado')}%
 - Condiciones médicas: {contexto.get('condicionesCronicas', 'Ninguna')}
-- Alergias: {alergias_texto}
+- Alergias (EVITAR ABSOLUTAMENTE): {alergias_texto}
 - Restricciones dietéticas: {restricciones_texto}
 - Días de entrenamiento: {contexto.get('diasEntrenamiento', 0)}
 - Objetivo específico: {contexto.get('objetivoEspecifico', 'Mejorar condición física')}
 
-**INSTRUCCIONES IMPORTANTES:**
+**INSTRUCCIONES CRÍTICAS PARA EVITAR DIETAS REPETITIVAS:**
+1. **PROHIBIDO RECICLAR EL MENÚ ESTÁNDAR:** No uses siempre avena con plátano en el desayuno, ni pechuga con quinoa en el almuerzo, ni salmón con espárragos en la cena a menos que el perfil lo exija estrictamente. Varía las fuentes de carbohidratos (ej. batata, yuca, arroz basmati, pasta integral, tortitas de arroz, pan de centeno), proteínas (ej. lomo de cerdo magro, atún, huevos, pavo, tofu, legumbres) y grasas (ej. aguacate, mantequilla de maní -si no hay alergia-, aceite de oliva, semillas de chía/girasol).
+2. **CREATIVIDAD Y VARIEDAD:** Diseña sugerencias culinarias atractivas, funcionales y adaptadas de forma única a este requerimiento.
+3. Las restricciones dietéticas del socio son: {restricciones_texto}. Respétalas al 100%.
+4. **CADA SUGERENCIA DE COMIDA DEBE TENER TODOS ESTOS CAMPOS OBLIGATORIOS:**
+   - `nombre`: Nombre creativo del plato.
+   - `descripcion`: Beneficios nutricionales específicos.
+   - `ingredientes`: Lista detallada de ingredientes separados por coma.
+   - `preparacion`: Instrucciones claras de preparación paso a paso.
+   - `calorias`: Número entero.
+   - `proteinas`, `carbohidratos`, `grasas`: Números decimales.
 
-1. Las restricciones dietéticas del socio son: {restricciones_texto}
-   - Si NO hay restricciones, el campo `restricciones_dieteticas` debe ser una lista vacía `[]`
-   - Si HAY restricciones (ej: vegetariano, vegano, sin gluten), deben aparecer en la lista
-
-2. **CADA SUGERENCIA DE COMIDA DEBE TENER TODOS ESTOS CAMPOS OBLIGATORIOS:**
-   - `nombre`: Nombre del plato (ej: "Avena con frutas y almendras")
-   - `descripcion`: Breve descripción del plato y sus beneficios (ej: "Desayuno energético rico en fibra y proteínas")
-   - `ingredientes`: Lista detallada de ingredientes separados por coma (ej: "Avena, leche de almendras, plátano, fresas, almendras")
-   - `preparacion`: Instrucciones claras de preparación (ej: "Cocinar la avena con leche de almendras a fuego medio durante 5 minutos. Añadir frutas picadas y almendras")
-   - `calorias`: Número entero
-   - `proteinas`, `carbohidratos`, `grasas`: Números decimales
-
-3. **NO DEJES NINGÚN CAMPO COMO null - TODOS DEBEN TENER VALOR**
-
-4. **FORMATO DE RESPUESTA - SOLO JSON válido, sin markdown, sin texto adicional:**
+5. **FORMATO DE RESPUESTA - SOLO JSON válido, sin markdown, sin texto adicional:**
 
 {{
     "calorias_diarias": 2200,
     "proteinas_g": 150.0,
     "carbohidratos_g": 250.0,
     "grasas_g": 70.0,
-    "restricciones_dieteticas": [],
+    "restricciones_dieteticas": {restricciones},
     "sugerencias_comidas": {{
         "desayuno": [
             {{
-                "nombre": "Avena con frutas y almendras",
-                "descripcion": "Desayuno energético rico en fibra y proteínas para empezar el día con energía",
-                "ingredientes": "Avena, leche de almendras, plátano, fresas, almendras picadas",
-                "preparacion": "Cocinar la avena con leche de almendras a fuego medio durante 5 minutos. Añadir frutas picadas y almendras por encima",
+                "nombre": "Ejemplo dinámico (crea uno nuevo y original)",
+                "descripcion": "Descripción adaptada",
+                "ingredientes": "Ingredientes variados",
+                "preparacion": "Pasos de preparación",
                 "calorias": 350,
                 "proteinas": 10.0,
                 "carbohidratos": 50.0,
@@ -169,10 +139,10 @@ DATOS DEL SOCIO:
         ],
         "almuerzo": [
             {{
-                "nombre": "Pechuga de pollo con quinoa",
-                "descripcion": "Almuerzo completo con proteínas magras y carbohidratos complejos",
-                "ingredientes": "Pechuga de pollo, quinoa, brócoli, zanahoria, aceite de oliva",
-                "preparacion": "Cocinar la pechuga a la plancha. Cocer la quinoa. Saltear verduras. Servir con aceite de oliva",
+                "nombre": "Plato de almuerzo alternativo y creativo",
+                "descripcion": "Descripción adaptada",
+                "ingredientes": "Ingredientes variados",
+                "preparacion": "Pasos de preparación",
                 "calorias": 600,
                 "proteinas": 40.0,
                 "carbohidratos": 60.0,
@@ -181,10 +151,10 @@ DATOS DEL SOCIO:
         ],
         "cena": [
             {{
-                "nombre": "Salmón con espárragos",
-                "descripcion": "Cena ligera rica en omega-3 y antioxidantes",
-                "ingredientes": "Salmón, espárragos, limón, ajo, aceite de oliva",
-                "preparacion": "Hornear el salmón con espárragos a 180°C durante 20 minutos. Aliñar con limón y ajo",
+                "nombre": "Plato de cena ligero y alternativo",
+                "descripcion": "Descripción adaptada",
+                "ingredientes": "Ingredientes variados",
+                "preparacion": "Pasos de preparación",
                 "calorias": 450,
                 "proteinas": 35.0,
                 "carbohidratos": 10.0,
@@ -193,10 +163,10 @@ DATOS DEL SOCIO:
         ],
         "colaciones": [
             {{
-                "nombre": "Batido de proteínas y frutas",
-                "descripcion": "Colación nutritiva para recuperación muscular",
-                "ingredientes": "Leche de almendras, plátano, proteína de suero, miel",
-                "preparacion": "Licuar todos los ingredientes hasta obtener una mezcla homogénea",
+                "nombre": "Snack o colación funcional",
+                "descripcion": "Descripción adaptada",
+                "ingredientes": "Ingredientes variados",
+                "preparacion": "Pasos de preparación",
                 "calorias": 200,
                 "proteinas": 20.0,
                 "carbohidratos": 25.0,
@@ -204,10 +174,9 @@ DATOS DEL SOCIO:
             }}
         ]
     }},
-    "explicacion_ia": "Explicación detallada de por qué este plan es adecuado para el socio"
+    "explicacion_ia": "Explicación detallada de por qué este plan específico y variado se adapta al socio."
 }}
 
-**RESPONDE SOLO CON JSON VÁLIDO. TODOS LOS CAMPOS DEBEN TENER VALOR. NINGÚN CAMPO PUEDE SER null.**
-**LAS RESTRICCIONES DIETÉTICAS DEL SOCIO SON: {restricciones_texto}. DEBES INCLUIRLAS EN EL CAMPO `restricciones_dieteticas`.**
+**RESPONDE SOLO CON JSON VÁLIDO. NO REPITAS LOS MISMOS PLATOS DE PRUEBAS ANTERIORES.**
 """
     return prompt
