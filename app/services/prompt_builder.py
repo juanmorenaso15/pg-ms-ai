@@ -3,16 +3,15 @@ from typing import Dict, Any, List
 def build_prompt(contexto: Dict[str, Any]) -> str:
     """
     Construye el prompt optimizado para Groq basado en el contexto del socio,
-    garantizando alta variedad de ejercicios y progresión real por semanas.
+    los equipos disponibles en su sede y los ejercicios existentes en la BD.
     """
     
     ejercicios_disponibles = contexto.get("ejerciciosDisponibles", [])
     equipos_disponibles = contexto.get("equiposDisponibles", [])
     dias_por_semana = contexto.get('diasPorSemana', 3)
-    duracion_semanas = contexto.get('duracionSemanas', 4)
     
     prompt = f"""
-Eres un entrenador personal de élite, especialista en programación del entrenamiento, biomecánica y periodización avanzada para hipertrofia y fuerza. Tu meta es evitar rutinas aburridas o repetitivas.
+Eres un entrenador personal de élite, especialista en programación del entrenamiento, hipertrofia y acondicionamiento físico (CrossFit/Funcional).
 
 DATOS DEL SOCIO:
 - Nombre: {contexto.get('nombre', 'No especificado')}
@@ -21,56 +20,58 @@ DATOS DEL SOCIO:
 - Estatura: {contexto.get('estatura', 'No especificado')} cm
 - Nivel: {contexto.get('nivelExperiencia', 'No especificado')}
 - Objetivo: {contexto.get('objetivoPrincipal', 'No especificado')}
-- Lesiones o limitaciones (EVITAR EJERCICIOS QUE AFECTEN ESTO): {contexto.get('lesionesPrevias', 'Ninguna')}
+- Lesiones o limitaciones (EVITAR): {contexto.get('lesionesPrevias', 'Ninguna')}
 - Condiciones médicas: {contexto.get('condicionesCronicas', 'Ninguna')}
-- Días por semana: {dias_por_semana}
-- Duración total: {duracion_semanas} semanas
+- Días por semana a entrenar: {dias_por_semana}
+- Duración total: EXACTAMENTE 1 SEMANA (semana 1 únicamente).
 - Incluir Cardio: {contexto.get('incluirCardio', True)}
 
-LISTADO DE EJERCICIOS DISPONIBLES EN EL SISTEMA ({len(ejercicios_disponibles)} totales):
-Selecciona exclusivamente ejercicios de esta lista o variantes coherentes con los equipos disponibles.
+EQUIPOS DISPONIBLES EN LA SEDE DEL GIMNASIO ({len(equipos_disponibles)} total):
 """
-    
-    for ej in ejercicios_disponibles[:60]:
-        prompt += f"- ID/Nombre: {ej.get('nombre')} | Grupo Muscular: {ej.get('grupoMuscular')} | Equipo: {ej.get('equipoNecesario', 'Sin equipo')}\n"
+    if equipos_disponibles:
+        for eq in equipos_disponibles[:50]:
+            prompt += f"- {eq.get('nombre')} (Ubicación: {eq.get('ubicacion')})\n"
+    else:
+        prompt += "- No hay equipos registrados en la sede (enfocarse en peso corporal/calistenia).\n"
+
+    prompt += f"\nLISTADO DE EJERCICIOS EXISTENTES EN LA BASE DE DATOS ({len(ejercicios_disponibles)} totales):\n"
+    if ejercicios_disponibles:
+        for ej in ejercicios_disponibles[:60]:
+            prompt += f"- Nombre: {ej.get('nombre')} | Grupo: {ej.get('grupoMuscular')} | Equipo: {ej.get('equipoNecesario', 'Sin equipo')}\n"
+    else:
+        prompt += "No hay ejercicios registrados previamente.\n"
     
     prompt += f"""
 
-EQUIPOS DISPONIBLES EN EL GIMNASIO ({len(equipos_disponibles)}):
-"""
-    
-    for eq in equipos_disponibles[:40]:
-        prompt += f"- {eq.get('nombre')} ({eq.get('marca', '')} {eq.get('modelo', '')})\n"
-    
-    prompt += f"""
+**INSTRUCCIONES CRÍTICAS Y OBLIGATORIAS:**
+1. **DURACIÓN DE UNA SEMANA:** Genera la rutina exclusivamente para la **Semana 1**.
+2. **DÍAS Y CANTIDAD DE EJERCICIOS:** Genera exactamente {dias_por_semana} días de entrenamiento (del día 1 al {dias_por_semana}). Cada día debe contener **MÍNIMO 5 EJERCICIOS DIFERENTES**.
+3. **INVENTAR / CREAR EJERCICIOS NUEVOS (CRÍTICO):** Puedes reutilizar los ejercicios de la base de datos, **PERO TAMBIÉN PUEDES CREAR Y PROPONER EJERCICIOS NUEVOS** (tanto usando las máquinas de los equipos disponibles como ejercicios libres, funcionales, de calistenia o estilo CrossFit, ej. sentadilla búlgara, flexiones diamante, burpees, clean and jerk, etc.) para ofrecer la mejor variedad posible.
+4. **GRUPO MUSCULAR OBLIGATORIO:** CADA ejercicio DEBE incluir su `grupoMuscular` exacto entre: "PECHO", "ESPALDA", "PIERNA", "HOMBRO", "BRAZO", "CORE", "CARDIO". **PROHIBIDO dejarlo vacío**.
+5. **EQUIPAMIENTO REQUERIDO:** Indica claramente el `equipoRequerido` para cada ejercicio (puede ser una máquina de la lista de equipos, peso corporal, mancuernas, barra, etc.).
+6. **CAMPOS OBLIGATORIOS:** `semana` = `1`, `diaSemana` de 1 al {dias_por_semana}, y `orden` correlativo por día.
 
-**INSTRUCCIONES CRÍTICAS PARA EVITAR RUTINAS MONÓTONAS:**
-1. **VARIEDAD OBLIGATORIA ENTRE SEMANAS:** Prohibido copiar exactamente la misma estructura de ejercicios de la Semana 1 en la Semana 2, 3 o 4. Modifica variantes de ejercicios (ej: si en la semana 1 usas press plano con barra, en la semana siguiente usa press inclinado o con mancuernas) y aplica una **progresión lógica de cargas o repeticiones** semana a semana.
-2. **ESTRUCTURA POR SEMANAS Y DÍAS:** Debes generar una rutina detallada que cubra obligatoriamente las {duracion_semanas} semanas. Incluye los días seleccionados (del día 1 al {dias_por_semana}) para la **Semana 1**, luego para la **Semana 2**, y así sucesivamente hasta la semana {duracion_semanas}.
-3. **CANTIDAD DE EJERCICIOS:** Cada día de entrenamiento debe tener **MÍNIMO 4 A 6 EJERCICIOS DIFERENTES** bien distribuidos (compuestos y accesorios).
-4. **EQUIPAMIENTO REAL:** CADA EJERCICIO DEBE INCLUIR EL EQUIPO NECESARIO (`equipoRequerido`) basándote estrictamente en las listas provistas. Si no requiere equipo, indica "Sin equipo".
-5. **CAMPOS OBLIGATORIOS:** El campo `semana` (1, 2, 3...), `diaSemana` (1 a {dias_por_semana}) y `orden` (1, 2, 3...) deben estructurarse de forma impecable en el JSON. **NINGÚN EJERCICIO DEBE TENER `semana` COMO null**.
+RESPONDE SOLO CON JSON VÁLIDO. SIN MARKDOWN. SIN ```json. SIN TEXTO ADICIONAL.
 
-RESPONDE SOLO CON JSON VÁLIDO. SIN MARKDOWN. SIN ```json. SIN TEXTO ADICIONAL ANTES O DESPUÉS.
-
-EL JSON DEBE TENER EXACTAMENTE ESTA ESTRUCTURA DE ARRAY EN "detalles":
+EL JSON DEBE TENER EXACTAMENTE ESTA ESTRUCTURA:
 {{
-    "nombre": "Rutina avanzada de {duracion_semanas} semanas - Enfoque Dinámico",
-    "descripcion": "Rutina periodizada enfocada en {contexto.get('objetivoPrincipal', 'fitness')} con variaciones semanales para evitar estancamiento.",
-    "explicacionIA": "Explicación detallada de la progresión de cargas, la selección de ejercicios y por qué esta variación por semanas optimiza los resultados del socio.",
+    "nombre": "Rutina personalizada de 1 semana",
+    "descripcion": "Rutina enfocada en {contexto.get('objetivoPrincipal', 'fitness')} con {dias_por_semana} días de entrenamiento.",
+    "explicacionIA": "Explicación detallada de la selección de ejercicios y combinación de equipos.",
     "detalles": [
         {{
             "semana": 1,
             "diaSemana": 1,
             "orden": 1,
-            "nombreEjercicio": "Nombre exacto del ejercicio",
+            "nombreEjercicio": "Nombre exacto y creativo del ejercicio",
+            "grupoMuscular": "PIERNA",
             "series": 4,
             "repeticionesMin": 8,
-            "repeticionesMax": 10,
-            "pesoSugerido": 20.0,
-            "descansoSegundos": 90,
-            "notas": "Semana 1: Establecer base de fuerza con técnica perfecta.",
-            "equipoRequerido": "Nombre del equipo"
+            "repeticionesMax": 12,
+            "pesoSugerido": 0.0,
+            "descansoSegundos": 60,
+            "notas": "Mantener la espalda recta.",
+            "equipoRequerido": "Peso corporal"
         }}
     ]
 }}

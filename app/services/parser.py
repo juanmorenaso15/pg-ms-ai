@@ -14,7 +14,6 @@ def parse_response(respuesta: str) -> Dict[str, Any]:
     respuesta = respuesta.strip()
     print(f"Respuesta original (primeros 200 chars): {respuesta[:200]}...")
     
-    # Limpiar markdown
     cleaned = re.sub(r'```json\s*', '', respuesta)
     cleaned = re.sub(r'```\s*', '', cleaned)
     cleaned = cleaned.strip()
@@ -26,7 +25,6 @@ def parse_response(respuesta: str) -> Dict[str, Any]:
         except json.JSONDecodeError:
             pass
     
-    # Buscar bloque JSON con markdown
     json_block_pattern = r'```json\s*([\s\S]*?)```'
     match = re.search(json_block_pattern, respuesta)
     
@@ -38,7 +36,6 @@ def parse_response(respuesta: str) -> Dict[str, Any]:
         except json.JSONDecodeError as e:
             print(f"Error decodificando JSON del bloque: {e}")
     
-    # Buscar JSON en el texto
     json_pattern = r'\{[\s\S]*\}'
     match = re.search(json_pattern, respuesta)
     
@@ -50,7 +47,6 @@ def parse_response(respuesta: str) -> Dict[str, Any]:
         except json.JSONDecodeError as e:
             print(f"Error decodificando JSON: {e}")
     
-    # Intentar parsear directamente
     try:
         print("Intentando parsear directamente")
         return _procesar_json(json.loads(respuesta))
@@ -66,11 +62,9 @@ def _procesar_json(data: Dict[str, Any]) -> Dict[str, Any]:
     Detecta si es plan nutricional (tiene calorias_diarias) o rutina (tiene detalles/dias).
     """
     
-    # DETECTAR PLAN NUTRICIONAL
     if "calorias_diarias" in data or "caloriasDiarias" in data:
         print("Plan nutricional detectado")
         
-        # Convertir nombres de campos a snake_case
         if "caloriasDiarias" in data and "calorias_diarias" not in data:
             data["calorias_diarias"] = data["caloriasDiarias"]
             del data["caloriasDiarias"]
@@ -90,57 +84,41 @@ def _procesar_json(data: Dict[str, Any]) -> Dict[str, Any]:
             data["sugerencias_comidas"] = data["sugerenciasComidas"]
             del data["sugerenciasComidas"]
         
-        # PROCESAR PLAN NUTRICIONAL - VALIDAR Y COMPLETAR CAMPOS
         data = _procesar_plan_nutricional(data)
         
         return data
     
-    # DETECTAR RUTINA (con detalles)
     if "detalles" in data and data["detalles"]:
         print(f"JSON ya tiene 'detalles' con {len(data['detalles'])} ejercicios")
         
-        # Detectar cuántos días únicos existen por bloque para calcular la semana si viene en null
-        dias_en_detalles = [d.get("diaSemana") for d in data["detalles"] if d.get("diaSemana") is not None]
-        dias_unicos = sorted(list(set(dias_en_detalles)))
-        total_dias_por_bloque = len(dias_unicos) if dias_unicos else 5
-        
-        bloque_actual = 0
-        ultimo_dia = -1
-        
         for idx, detalle in enumerate(data["detalles"]):
-            # Validar equipo requerido
             if "equipoRequerido" not in detalle or detalle["equipoRequerido"] is None:
                 detalle["equipoRequerido"] = "Sin equipo específico"
             
+            if "grupoMuscular" not in detalle or detalle["grupoMuscular"] is None:
+                detalle["grupoMuscular"] = detalle.get("grupo_muscular", "GENERAL")
+            if not detalle["grupoMuscular"]:
+                detalle["grupoMuscular"] = "GENERAL"
+            
             dia_actual = detalle.get("diaSemana", 1)
             if dia_actual is None:
-                dia_actual = 1
                 detalle["diaSemana"] = 1
                 
-            if idx > 0 and dia_actual <= ultimo_dia:
-                bloque_actual += 1
-                
-            ultimo_dia = dia_actual
-            
-            if "semana" not in detalle or detalle["semana"] is None:
-                detalle["semana"] = bloque_actual + 1
+            detalle["semana"] = 1
                 
         return data
     
-    # DETECTAR RUTINA (con dias)
     if "dias" in data and data["dias"]:
         print("Transformando 'dias' a 'detalles'")
         data["detalles"] = []
         for dia in data.get("dias", []):
-            semana_num = dia.get("semana", 1)
-            if semana_num is None:
-                semana_num = 1
             for ejercicio in dia.get("ejercicios", []):
                 detalle = {
-                    "semana": semana_num,
+                    "semana": 1,
                     "diaSemana": dia.get("dia", 1),
                     "orden": ejercicio.get("orden", len(data["detalles"]) + 1),
                     "nombreEjercicio": ejercicio.get("nombre_ejercicio", ejercicio.get("nombreEjercicio", "")),
+                    "grupoMuscular": ejercicio.get("grupoMuscular", ejercicio.get("grupo_muscular", "GENERAL")),
                     "series": ejercicio.get("series", 3),
                     "repeticionesMin": ejercicio.get("repeticiones_min", ejercicio.get("repeticionesMin")),
                     "repeticionesMax": ejercicio.get("repeticiones_max", ejercicio.get("repeticionesMax")),
@@ -156,16 +134,16 @@ def _procesar_json(data: Dict[str, Any]) -> Dict[str, Any]:
         print(f"Transformados {len(data['detalles'])} ejercicios a 'detalles'")
         return data
     
-    # DETECTAR RUTINA (con ejercicios directamente)
     if "ejercicios" in data and data["ejercicios"]:
         print("Convirtiendo 'ejercicios' directamente a 'detalles'")
         data["detalles"] = []
         for ejercicio in data.get("ejercicios", []):
             detalle = {
-                "semana": ejercicio.get("semana", 1) if ejercicio.get("semana") is not None else 1,
+                "semana": 1,
                 "diaSemana": 1,
                 "orden": ejercicio.get("orden", len(data["detalles"]) + 1),
                 "nombreEjercicio": ejercicio.get("nombre", ejercicio.get("nombre_ejercicio", "")),
+                "grupoMuscular": ejercicio.get("grupoMuscular", ejercicio.get("grupo_muscular", "GENERAL")),
                 "series": ejercicio.get("series", 3),
                 "repeticionesMin": ejercicio.get("repeticiones_min", ejercicio.get("repeticionesMin")),
                 "repeticionesMax": ejercicio.get("repeticiones_max", ejercicio.get("repeticionesMax")),
@@ -190,33 +168,26 @@ def _procesar_plan_nutricional(data: Dict[str, Any]) -> Dict[str, Any]:
     Procesa y valida un plan nutricional, asegurando que todos los campos tengan valor.
     """
     
-    # Asegurar que restricciones_dieteticas sea una lista
     if "restricciones_dieteticas" not in data or data["restricciones_dieteticas"] is None:
         data["restricciones_dieteticas"] = []
     
-    # Asegurar que exista explicacion_ia
     if "explicacion_ia" not in data or data["explicacion_ia"] is None:
         data["explicacion_ia"] = "Plan nutricional personalizado adaptado a las necesidades del socio."
     
-    # Procesar sugerencias de comidas
     if "sugerencias_comidas" in data and data["sugerencias_comidas"]:
         for comida, items in data["sugerencias_comidas"].items():
             if isinstance(items, list):
                 for item in items:
                     if isinstance(item, dict):
-                        # Asegurar descripcion
                         if "descripcion" not in item or item["descripcion"] is None or item["descripcion"] == "":
                             item["descripcion"] = f"{item.get('nombre', 'Plato')} - Opción nutritiva y balanceada"
                         
-                        # Asegurar ingredientes
                         if "ingredientes" not in item or item["ingredientes"] is None or item["ingredientes"] == "":
                             item["ingredientes"] = "Ingredientes frescos y saludables"
                         
-                        # Asegurar preparacion
                         if "preparacion" not in item or item["preparacion"] is None or item["preparacion"] == "":
                             item["preparacion"] = "Preparar los ingredientes, cocinar al gusto y servir"
     else:
-        # Si no hay sugerencias_comidas, crear valores por defecto
         data["sugerencias_comidas"] = {
             "desayuno": [
                 {

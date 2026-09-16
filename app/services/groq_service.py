@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class GroqService:
     def __init__(self):
         self.api_key = settings.GROQ_API_KEY
-        self.model_name = settings.MODEL_NAME or "groq/compound"
+        self.model_name = settings.MODEL_NAME or "openai/gpt-oss-120b"
         
         if self.api_key:
             try:
