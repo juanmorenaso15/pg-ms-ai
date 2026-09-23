@@ -9,6 +9,7 @@ def build_prompt(contexto: Dict[str, Any]) -> str:
     ejercicios_disponibles = contexto.get("ejerciciosDisponibles", [])
     equipos_disponibles = contexto.get("equiposDisponibles", [])
     dias_por_semana = contexto.get('diasPorSemana', 3)
+    hay_equipos = len(equipos_disponibles) > 0
     
     prompt = f"""
 Eres un entrenador personal de élite, especialista en programación del entrenamiento, hipertrofia y acondicionamiento físico (CrossFit/Funcional).
@@ -28,7 +29,7 @@ DATOS DEL SOCIO:
 
 EQUIPOS DISPONIBLES EN LA SEDE DEL GIMNASIO ({len(equipos_disponibles)} total):
 """
-    if equipos_disponibles:
+    if hay_equipos:
         for eq in equipos_disponibles[:50]:
             prompt += f"- {eq.get('nombre')} (Ubicación: {eq.get('ubicacion')})\n"
     else:
@@ -40,16 +41,36 @@ EQUIPOS DISPONIBLES EN LA SEDE DEL GIMNASIO ({len(equipos_disponibles)} total):
             prompt += f"- Nombre: {ej.get('nombre')} | Grupo: {ej.get('grupoMuscular')} | Equipo: {ej.get('equipoNecesario', 'Sin equipo')}\n"
     else:
         prompt += "No hay ejercicios registrados previamente.\n"
-    
+
+    instruccion_equipos = ""
+    if hay_equipos:
+        instruccion_equipos = f"""
+3. **USO OBLIGATORIO DE EQUIPOS DISPONIBLES (CRÍTICO):** La sede SÍ tiene {len(equipos_disponibles)} equipos registrados (ver listado arriba).
+   DEBES usar el nombre EXACTO de esos equipos en el campo `equipoRequerido` en **AL MENOS el 60% de los ejercicios de cada día**.
+   Por ejemplo, si en el listado aparece "Sentadilla Smith", "Prensa de piernas", "Multipower", "Polea alta", etc., 
+   TIENES QUE generar ejercicios reales que usen esas máquinas específicas (ej. "Sentadilla en Smith", 
+   "Prensa de piernas 45°", "Press de banca en Multipower", "Jalón al pecho en polea").
+   Solo usa "Peso corporal" o ejercicios de calistenia (burpees, plancha, flexiones, zancadas sin peso) 
+   en el resto de ejercicios (máximo 40% del total), NUNCA como opción por defecto.
+   **PROHIBIDO ignorar el equipamiento disponible y generar la rutina completa solo con peso corporal.**
+"""
+    else:
+        instruccion_equipos = """
+3. **SIN EQUIPOS DISPONIBLES:** La sede no tiene equipos registrados, por lo que la rutina debe basarse 
+   en ejercicios de peso corporal, calistenia y trabajo funcional (sentadillas, flexiones, plancha, 
+   zancadas, burpees, dominadas, etc.).
+"""
+
     prompt += f"""
 
 **INSTRUCCIONES CRÍTICAS Y OBLIGATORIAS:**
 1. **DURACIÓN DE UNA SEMANA:** Genera la rutina exclusivamente para la **Semana 1**.
 2. **DÍAS Y CANTIDAD DE EJERCICIOS:** Genera exactamente {dias_por_semana} días de entrenamiento (del día 1 al {dias_por_semana}). Cada día debe contener **MÍNIMO 5 EJERCICIOS DIFERENTES**.
-3. **INVENTAR / CREAR EJERCICIOS NUEVOS (CRÍTICO):** Puedes reutilizar los ejercicios de la base de datos, **PERO TAMBIÉN PUEDES CREAR Y PROPONER EJERCICIOS NUEVOS** (tanto usando las máquinas de los equipos disponibles como ejercicios libres, funcionales, de calistenia o estilo CrossFit, ej. sentadilla búlgara, flexiones diamante, burpees, clean and jerk, etc.) para ofrecer la mejor variedad posible.
-4. **GRUPO MUSCULAR OBLIGATORIO:** CADA ejercicio DEBE incluir su `grupoMuscular` exacto entre: "PECHO", "ESPALDA", "PIERNA", "HOMBRO", "BRAZO", "CORE", "CARDIO". **PROHIBIDO dejarlo vacío**.
-5. **EQUIPAMIENTO REQUERIDO:** Indica claramente el `equipoRequerido` para cada ejercicio (puede ser una máquina de la lista de equipos, peso corporal, mancuernas, barra, etc.).
-6. **CAMPOS OBLIGATORIOS:** `semana` = `1`, `diaSemana` de 1 al {dias_por_semana}, y `orden` correlativo por día.
+{instruccion_equipos}
+4. **REUTILIZAR EJERCICIOS EXISTENTES:** Prioriza reutilizar los ejercicios ya existentes en la base de datos que coincidan con el equipamiento disponible. Solo crea ejercicios nuevos (variantes de calistenia o combinaciones con las máquinas de la sede) cuando sea necesario para completar el mínimo de 5 ejercicios por día o para dar variedad.
+5. **GRUPO MUSCULAR OBLIGATORIO:** CADA ejercicio DEBE incluir su `grupoMuscular` exacto entre: "PECHO", "ESPALDA", "PIERNA", "HOMBRO", "BRAZO", "CORE", "CARDIO". **PROHIBIDO dejarlo vacío**.
+6. **EQUIPAMIENTO REQUERIDO:** Indica claramente el `equipoRequerido` para cada ejercicio usando el nombre EXACTO de la lista de equipos cuando aplique, o "Peso corporal" / "Mancuernas" / "Barra" cuando no haya un equipo específico de la lista involucrado.
+7. **CAMPOS OBLIGATORIOS:** `semana` = `1`, `diaSemana` de 1 al {dias_por_semana}, y `orden` correlativo por día.
 
 RESPONDE SOLO CON JSON VÁLIDO. SIN MARKDOWN. SIN ```json. SIN TEXTO ADICIONAL.
 
