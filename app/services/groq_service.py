@@ -35,6 +35,8 @@ class GroqService:
             logger.info(f"Enviando prompt a Groq (tamaño: {len(prompt)} caracteres)")
             logger.info(f"Datos del socio: {contexto.get('nombre')} ({contexto.get('edad')} años)")
             logger.info(f"Ejercicios disponibles: {len(contexto.get('ejerciciosDisponibles', []))}")
+            equipos_ctx = contexto.get('equiposDisponibles', [])
+            logger.info(f"Equipos disponibles: {len(equipos_ctx)} -> {[e.get('nombre') for e in equipos_ctx]}")
             
             chat_completion = self.client.chat.completions.create(
                 messages=[
